@@ -1,12 +1,15 @@
 import express, { Application, Request, Response, NextFunction } from "express";
-import * as mongoose from "mongoose";
+import mongoose from "mongoose";
 import { getEnvironmentVariable } from "./environments/environment";
-import UserRouter from "./routers/UserRouter";
-import NotesRouter from "./routers/NotesRouter";  // Import Notes Router
-import * as bodyParser from "body-parser";
-import cors from "cors";  
+import userRouter from "./routers/UserRouter";
+import notesRouter from "./routers/NotesRouter";
+import bodyParser from "body-parser";
+import { GlobalMiddleWare } from "./middleware/GlobalMiddleWare";
+
+import cors from "cors";
 import { Utils } from "./utils/Utils";
-// import NotesRouter from "./routers/NotesRouter";
+import BlacklistedToken from "./models/BlacklistedToken";
+
 export class Server {
   public app: Application = express();
 
@@ -29,9 +32,19 @@ export class Server {
   }
 
   private connectMongoDB(): void {
-    mongoose.connect(getEnvironmentVariable().db_uri)
-      .then(() => console.log("Connected to MongoDB"))
-      .catch((err) => console.error("MongoDB Connection Error:", err));
+    const dbURI = getEnvironmentVariable().db_uri;
+    if (!dbURI) {
+      console.error("Error: Missing MongoDB URI. Check environment variables.");
+      process.exit(1); // Exit if DB URI is missing
+    }
+
+    mongoose
+      .connect(dbURI)
+      .then(() => console.log("✅ Connected to MongoDB"))
+      .catch((err) => {
+        console.error("❌ MongoDB Connection Error:", err);
+        process.exit(1); // Exit on failure
+      });
   }
 
   private configureBodyParser(): void {
@@ -43,25 +56,49 @@ export class Server {
     this.app.use(cors());
   }
 
-  private setRoutes(): void {
-    this.app.use("/api/user", UserRouter);
-    this.app.use("/api/notes", NotesRouter);  
-    // this.app.use('/api/user', otpRoutes);
+  private async checkBlacklistedToken(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const token = req.header("Authorization")?.replace("Bearer ", "");
+      if (token) {
+        const blacklisted = await BlacklistedToken.findOne({ token });
+        if (blacklisted) {
+          return res
+            .status(401)
+            .json({ message: "Token has been blacklisted. Please log in again." });
+        }
+      }
+      next();
+    } catch (error) {
+      console.error("Error checking token blacklist:", error);
+      return res.status(500).json({ message: "Internal Server Error" });
+    }
   }
 
+
+  private setRoutes(): void {
+    // Middleware should be applied before routes
+    this.app.use((req, res, next) => GlobalMiddleWare.checkTokenBlacklist(req, res, next));
+
+    // Define routes
+    this.app.use("/api/user", userRouter);
+    this.app.use("/api/note", notesRouter);
+  }
   private error404Handler(): void {
     this.app.use((req: Request, res: Response) => {
-      res.status(404).json({
-        message: "Not found",
-        status_code: 404,
-      });
+      res.status(404).json({ message: "Not found", status_code: 404 });
     });
   }
 
   private handleErrors(): void {
-    this.app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
-      console.error("Error:", error.message);
-      res.status(500).json({ message: "Internal Server Error" });
-    });
+    this.app.use(
+      (error: Error, req: Request, res: Response, next: NextFunction) => {
+        console.error("Error:", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
+      }
+    );
   }
 }

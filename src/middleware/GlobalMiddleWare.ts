@@ -1,9 +1,11 @@
 import { Jwt } from "./../utils/Jwt";
 import { validationResult } from "express-validator";
-import { Request, Response, NextFunction } from "express";
-import User from "../models/User"; 
+import express, { Request, Response, NextFunction } from "express";
+import User from "../models/User";
 import Note from "../models/Note";
-import { TokenBlacklist } from "../models/TokenBlacklist";
+import BlacklistedToken from "../models/BlacklistedToken";
+import jwt from "jsonwebtoken";
+import userRouter from "../routers/UserRouter"; // ✅ Added missing import
 
 export class GlobalMiddleWare {
   static checkError(req: Request, res: Response, next: NextFunction) {
@@ -13,46 +15,54 @@ export class GlobalMiddleWare {
     }
     next();
   }
-
-  static async logout(req: Request, res: Response) {
-    const token = req.headers.authorization?.split(' ')[1];
-    
-    if (!token) {
-      return res.status(400).json({ message: "Token is required for logout" });
-    }
-
-    // Add token to the blacklist
-    await TokenBlacklist.create({ token });
-
-    return res.status(200).json({ message: "Logged out successfully" });
-  }
-
-  static async auth(req: Request, res: Response, next: NextFunction) {
-    const header_auth = req.headers.authorization;
-    const token = header_auth ? header_auth.split(" ")[1] : null;
-
-    console.log("Received Token:", token); // Log the received token
-
+  static async auth(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        if (!token) {
-            return next(new Error("Unauthorized: No token provided"));
+      const token = req.headers.authorization?.split(" ")[1];
+  
+      if (!token) {
+        res.status(401).json({ message: "Unauthorized: No token provided" });
+        return; // ✅ Fix: Explicit return
+      }
+  
+      const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+      (req as any).user = decoded;
+      next();
+    } catch (error: any) {
+      if (error.name === "TokenExpiredError") {
+        res.status(401).json({ message: "Session expired. Please log in again." });
+      } else {
+        res.status(401).json({ message: "Unauthorized: Token verification failed" });
+      }
+      return; // ✅ Fix: Explicit return to match void type
+    }
+  }
+  
+
+  static async checkTokenBlacklist(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const token = req.header("Authorization")?.replace("Bearer ", "");
+        if (token) {
+            const blacklisted = await BlacklistedToken.findOne({ token });
+            if (blacklisted) {
+                res.status(401).json({ message: "Token has been blacklisted. Please log in again." });
+                return;
+            }
         }
-
-        // Include email in the decoded payload
-        const decoded = await Jwt.jwtVerify(token) as { _id?: string; email?: string };
-
-        console.log("Decoded Token:", decoded); // Log the decoded token
-
-        if (!decoded._id || !decoded.email) {
-            return next(new Error("Unauthorized: Invalid token"));
-        }
-
-        // Store both _id and email in the request object
-        (req as any).user = { _id: decoded._id, email: decoded.email };
-        next();
-    } catch (e) {
-        console.error("Token Verification Error:", e); // Log the error
-        return next(new Error("Unauthorized: Invalid token"));
+        next(); // ✅ Call next() properly
+    } catch (error) {
+        console.error("Error checking token blacklist:", error);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 }
+
+//   private setRoutes(): void {
+//     const router = express.Router();
+    
+//     router.use((req, res, next) => GlobalMiddleWare.checkTokenBlacklist(req, res, next));
+
+//     router.use("/users", userRouter); // No "/api" here, since it's handled by `app.use()`
+
+    
+
+// }
 }

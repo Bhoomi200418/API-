@@ -1,10 +1,7 @@
-import { Request, Response, Router } from "express";
+import { Router } from "express";
 import { UserValidators } from "../validators/UserValidators";
 import { UserController } from "../controllers/UserController";
 import { GlobalMiddleWare } from "../middleware/GlobalMiddleWare";
-import asyncHandler from "express-async-handler";
-import User from "../models/User"; 
-
 
 class UserRouter {
   public router: Router;
@@ -18,17 +15,8 @@ class UserRouter {
   }
 
   private getRoutes() {
-    this.router.get("/notes", GlobalMiddleWare.auth, UserController.getNotes);
-    this.router.get(
-      "/notes/date",
-      GlobalMiddleWare.auth,
-      UserController.getNotesByDate
-    );
-    this.router.get(
-      "/profile",
-      GlobalMiddleWare.auth,
-      UserController.userProfile
-    );
+    this.router.get("/notes/date", GlobalMiddleWare.auth, UserController.getNotesByDate);
+    this.router.get("/profile", GlobalMiddleWare.auth, UserController.userProfile);
   }
 
   private postRoutes() {
@@ -38,44 +26,38 @@ class UserRouter {
       GlobalMiddleWare.checkError,
       UserController.signup
     );
-    this.router.post(
-      "/notes",
-      GlobalMiddleWare.auth,
-      UserController.createNote
-    );
+    
     this.router.post(
       "/login",
       UserValidators.login(),
       GlobalMiddleWare.checkError,
-      asyncHandler(UserController.login)
+      UserController.login
     );
+
     this.router.post(
       "/send-otp",
       UserValidators.sendOtp(),
       UserController.sendOtp
     );
+
     this.router.post(
       "/verify-otp",
       UserValidators.verifyOtp(),
       UserController.verifyOtp
     );
+
+    // ✅ Fixed logout by using `UserController.logout`
     this.router.post("/logout", GlobalMiddleWare.auth, UserController.logout);
+
+    this.router.post("/notes", GlobalMiddleWare.auth, UserController.createNote);
   }
+
   private patchRoutes() {
-    this.router.patch(
-      "/notes",
-      GlobalMiddleWare.auth,
-      UserController.updateNote
-    );
+    this.router.patch("/notes/:noteId", GlobalMiddleWare.auth, UserController.updateNote);
   }
 
   private deleteRoutes() {
-    this.router.delete(
-      "/notes",
-      GlobalMiddleWare.auth,
-      UserController.deleteNote
-    );
-  
+    this.router.delete("/notes/:noteId", GlobalMiddleWare.auth, UserController.deleteNote);
   }
 }
 

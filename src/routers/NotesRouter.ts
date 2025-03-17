@@ -17,16 +17,24 @@ class NotesRouter {
   }
 
   getRoutes() {
-    this.router.get("/", GlobalMiddleWare.auth, NotesController.getNotes);
-    this.router.get("/date", GlobalMiddleWare.auth, NotesController.getNotesByDate);
+    this.router.get("/", NotesController.getNotes);
+    this.router.get("/date", NotesController.getNotesByDate);
   }
 
   postRoutes() {
-    this.router.post("/", NotesValidators.createNote(), GlobalMiddleWare.checkError, GlobalMiddleWare.auth, NotesController.createNote);
+  //   this.router.post("create-note", NotesValidators.createNote(), GlobalMiddleWare.checkError, NotesController.createNote);
+  this.router.post(
+    "/",  // ✅ Correct path
+    GlobalMiddleWare.auth,
+    NotesValidators.createNote(),
+    GlobalMiddleWare.checkError,
+    NotesController.createNote
+);
+
   }
 
   patchRoutes() {
-    this.router.patch("/:id", NotesValidators.updateNote(), GlobalMiddleWare.checkError, GlobalMiddleWare.auth, NotesController.updateNote);
+    this.router.patch("/:id", NotesValidators.updateNote(), GlobalMiddleWare.checkError, NotesController.updateNote);
   }
 
   putRoutes() {
@@ -34,7 +42,7 @@ class NotesRouter {
   }
 
   deleteRoutes() {
-    this.router.delete("/:id", GlobalMiddleWare.auth, NotesController.deleteNote);
+    this.router.delete("/:id", NotesController.deleteNote);
   }
 }
 

@@ -2,6 +2,8 @@ import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import multer, { FileFilterCallback } from "multer";
+import BlacklistedToken from "../models/BlacklistedToken";
+
 import { Request } from "express";
 
 dotenv.config(); // Ensure environment variables are loaded at the start
@@ -72,5 +74,12 @@ export class Utils {
     encrypt_password: string;
   }): Promise<boolean> {
     return bcrypt.compare(data.password, data.encrypt_password);
-  }
-}
+  }}
+  export const isTokenBlacklisted = async (token: string): Promise<boolean> => {
+  if (!token) return false;
+  console.log("Checking token:", token); // :white_tick: Debugging line
+  const blacklisted = await BlacklistedToken.findOne({ token }).lean();
+  console.log("Blacklisted result:", blacklisted); // :white_tick: Debugging line
+  return !!blacklisted;
+};
+

@@ -21,7 +21,9 @@ export class NotesController {
         return;
       }
 
-      const note = new Note({ userId: req.user._id, title, content });
+      const note = new Note({ 
+        userId: req.user._id,
+         title, content });
       await note.save();
 
       res.status(201).json({ message: "Note created successfully", note });
@@ -38,7 +40,9 @@ export class NotesController {
         return;
       }
 
-      const notes = await Note.find({ userId: req.user._id });
+      const notes = await Note.find({ 
+        userId: req.user._id
+       });
       res.json(notes);
     } catch (error) {
       next(error);

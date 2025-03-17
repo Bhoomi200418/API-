@@ -6,7 +6,7 @@ export class NotesValidators {
     return [
       body("title", "Title is required").isString().trim(),
       body("content", "Content is required").isString().trim(),
-      // body("userId", "User Note ID is required").isMongoId(),
+      body("userId", "User Note ID is required").isMongoId(),
     ];
   }
 
