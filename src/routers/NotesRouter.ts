@@ -1,49 +1,65 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
+// import { NotesController } from "../controllers/notescontroller";
+import { NoteController } from "../controllers/notescontroller";
+import { GlobalMiddleWare } from "../middleware/GlobalMiddleWare";
 import { NotesValidators } from "../validators/NotesValidators";
 
-import { NotesController } from "../controllers/notescontroller";
-import { GlobalMiddleWare } from "../middleware/GlobalMiddleWare";
-
-class NotesRouter {
+class NoteRouter {
   public router: Router;
 
   constructor() {
     this.router = Router();
-    this.getRoutes();
-    this.postRoutes();
-    this.patchRoutes();
-    this.putRoutes();
-    this.deleteRoutes();
+    this.initializeRoutes();
   }
-
-  getRoutes() {
-    this.router.get("/", NotesController.getNotes);
-    this.router.get("/date", NotesController.getNotesByDate);
-  }
-
-  postRoutes() {
-  //   this.router.post("create-note", NotesValidators.createNote(), GlobalMiddleWare.checkError, NotesController.createNote);
-  this.router.post(
-    "/",  // ✅ Correct path
-    GlobalMiddleWare.auth,
-    NotesValidators.createNote(),
-    GlobalMiddleWare.checkError,
-    NotesController.createNote
-);
-
-  }
-
-  patchRoutes() {
-    this.router.patch("/:id", NotesValidators.updateNote(), GlobalMiddleWare.checkError, NotesController.updateNote);
-  }
-
-  putRoutes() {
-    // You can add any necessary PUT routes here
-  }
-
-  deleteRoutes() {
-    this.router.delete("/:id", NotesController.deleteNote);
+  
+  initializeRoutes() {
+    this.router.post(
+      "/create",
+      GlobalMiddleWare.auth,
+      NotesValidators.createNote(),
+      GlobalMiddleWare.checkError,
+      NoteController.createNote
+    );
+    this.router.put(
+      "/update/:id",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          await NoteController.updateNote(req, res);
+        } catch (error) {
+          next(error);
+        }
+      }
+    );
+    this.router.get(
+      "/get/:id",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          await NoteController.getNote(req, res);
+        } catch (error) {
+          next(error);
+        }
+      }
+    );
+    this.router.get(
+      "/all",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          await NoteController.getAllNotes(req, res);
+        } catch (error) {
+          next(error);
+        }
+      }
+    );
+    this.router.delete(
+      "/delete/:id",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          await NoteController.deleteNote(req, res);
+        } catch (error) {
+          next(error);
+        }
+      }
+    );
   }
 }
-
-export default new NotesRouter().router;
+export default new NoteRouter().router;

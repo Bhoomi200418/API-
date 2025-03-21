@@ -36,26 +36,27 @@
 //   });
 // }
 
-import jwt from "jsonwebtoken";
+import * as jwt from "jsonwebtoken";
 
 export class Jwt {
-  static jwtSign(payload: object): string {
+  static jwtSign(payload: any, userId: any): string {
     return jwt.sign(payload, process.env.JWT_SECRET as string, {
       expiresIn: "1h",
+      audience: userId.toString()
     });
   }
 
-  static async jwtVerify(
-    token: string
-  ): Promise<any> {
+  static jwtVerify(token: string): Promise<any> {
     return new Promise((resolve, reject) => {
-      jwt.verify(token, process.env.JWT_SECRET as string, (err, decoded) => {
-        if (err) {
-          reject(err); // Reject promise if token is invalid
-        } else {
-          resolve(decoded as { _id?: string; email?: string });
+      jwt.verify(
+        token,
+        process.env.JWT_SECRET as string,
+        (err, decoded) => {
+          if (err) reject(err);
+          else if (!decoded) reject(new Error("User is not authorised."));
+          else resolve(decoded);
         }
-      });
+      );
     });
   }
 }

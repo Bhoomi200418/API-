@@ -1,134 +1,86 @@
-import { Request, Response, NextFunction } from "express";
-import Note from "../models/Note";
+import { NextFunction, Request, Response } from 'express';
+import { Note } from "../models/Note";
 
-// Extend Request interface to include user property
-interface AuthenticatedRequest extends Request {
-  user?: { _id: string }; // Ensure this matches your JWT payload
+
+export class NoteController {
+  static async createNote(req: Request, res: Response, next: NextFunction) {
+    const user = (req as any).user;
+    try {
+        console.log("Received Request from Device:", req.body); // ✅ Log request from Flutter
+
+        const { title, content, category } = req.body;
+        const userId = user.aud
+
+        const newNote = new Note({ title, content, userId, category });
+        const savedNote = await newNote.save();
+
+        console.log("Saved Note in MongoDB:", savedNote); // ✅ Log stored note
+        res.status(200).json({ message: "Note created successfully", note: savedNote });
+    } catch (e) {
+       next(e)
+    }
 }
-
-export class NotesController {
-  // Create a new note
-  static async createNote(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async updateNote(req: Request, res: Response) {
     try {
-      if (!req.user) {
-        res.status(401).json({ message: "Unauthorized access" });
-        return;
-      }
-
-      const { title, content } = req.body;
-      if (!title || !content) {
-        res.status(400).json({ message: "Title and content are required" });
-        return;
-      }
-
-      const note = new Note({ 
-        userId: req.user._id,
-         title, content });
-      await note.save();
-
-      res.status(201).json({ message: "Note created successfully", note });
+      const { id } = req.params;
+      const { title, content, date } = req.body;
+      const updatedNote = await Note.findByIdAndUpdate(id, { title, content, date }, { new: true });
+      if (!updatedNote) return res.status(404).json({ error: 'Note not found' });
+      return res.json({ message: 'Note updated successfully', note: updatedNote });
     } catch (error) {
-      next(error);
+      console.error('Error updating note:', error);
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
-
-  // Get all notes for the authenticated user
-  static async getNotes(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async getNote(req: Request, res: Response) {
     try {
-      if (!req.user) {
-        res.status(401).json({ message: "Unauthorized access" });
-        return;
-      }
-
-      const notes = await Note.find({ 
-        userId: req.user._id
-       });
-      res.json(notes);
+      const { id } = req.params;
+      const note = await Note.findById(id);
+      if (!note) return res.status(404).json({ error: 'Note not found' });
+      return res.json(note);
     } catch (error) {
-      next(error);
+      console.error('Error fetching note:', error);
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
-
-  // Get notes by date
-  static async getNotesByDate(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async getAllNotes(req: Request, res: Response) {
     try {
-      if (!req.user) {
-        res.status(401).json({ message: "Unauthorized access" });
-        return;
-      }
-
-      const { date } = req.body;
-      if (!date) {
-        res.status(400).json({ message: "Date is required" });
-        return;
-      }
-
-      const notes = await Note.find({
-        userId: req.user._id,
-        createdAt: { $gte: new Date(date) },
-      });
-
-      res.json(notes);
+      const notes = await Note.find();
+      return res.json(notes);
     } catch (error) {
-      next(error);
+      console.error('Error fetching notes:', error);
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
-
-  // Update a note
-  static async updateNote(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async deleteNote(req: Request, res: Response) {
     try {
-      if (!req.user) {
-        res.status(401).json({ message: "Unauthorized access" });
-        return;
-      }
-
-      const { noteId, title, content } = req.body;
-      if (!noteId || (!title && !content)) {
-        res.status(400).json({ message: "Note ID and at least one field (title/content) are required" });
-        return;
-      }
-
-      const updatedNote = await Note.findOneAndUpdate(
-        { _id: noteId, userId: req.user._id },
-        { title, content },
-        { new: true }
-      );
-
-      if (!updatedNote) {
-        res.status(404).json({ message: "Note not found" });
-        return;
-      }
-
-      res.json({ message: "Note updated successfully", updatedNote });
+      const { id } = req.params;
+      const note = await Note.findByIdAndDelete(id);
+      if (!note) return res.status(404).json({ error: 'Note not found' });
+      return res.json({ message: 'Note deleted successfully' });
     } catch (error) {
-      next(error);
-    }
-  }
-
-  // Delete a note
-  static async deleteNote(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
-    try {
-      if (!req.user) {
-        res.status(401).json({ message: "Unauthorized access" });
-        return;
-      }
-
-      const { noteId } = req.body;
-      if (!noteId) {
-        res.status(400).json({ message: "Note ID is required" });
-        return;
-      }
-
-      const deletedNote = await Note.findOneAndDelete({ _id: noteId, userId: req.user._id });
-
-      if (!deletedNote) {
-        res.status(404).json({ message: "Note not found" });
-        return;
-      }
-
-      res.json({ message: "Note deleted successfully" });
-    } catch (error) {
-      next(error);
+      console.error('Error deleting note:', error);
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -15,7 +15,7 @@ class UserRouter {
   }
 
   private getRoutes() {
-    this.router.get("/notes/date", GlobalMiddleWare.auth, UserController.getNotesByDate);
+    
     this.router.get("/profile", GlobalMiddleWare.auth, UserController.userProfile);
   }
 
@@ -49,15 +49,15 @@ class UserRouter {
     // ✅ Fixed logout by using `UserController.logout`
     this.router.post("/logout", GlobalMiddleWare.auth, UserController.logout);
 
-    this.router.post("/notes", GlobalMiddleWare.auth, UserController.createNote);
+   
   }
 
   private patchRoutes() {
-    this.router.patch("/notes/:noteId", GlobalMiddleWare.auth, UserController.updateNote);
+   
   }
 
   private deleteRoutes() {
-    this.router.delete("/notes/:noteId", GlobalMiddleWare.auth, UserController.deleteNote);
+   
   }
 }
 

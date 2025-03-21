@@ -51,10 +51,17 @@ export class Server {
     this.app.use(express.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
   }
-
   private allowCors(): void {
-    this.app.use(cors());
-  }
+    this.app.use(cors({
+        origin: "*", // Change this to specific frontend URL in production
+        methods: "GET,POST,PUT,DELETE,PATCH,OPTIONS",
+        allowedHeaders: "Content-Type,Authorization",
+        credentials: true, // Allow credentials if needed (e.g., cookies, auth headers)
+    }));
+
+    this.app.options("*", cors()); // Handle preflight requests
+}
+
 
   private async checkBlacklistedToken(
     req: Request,
