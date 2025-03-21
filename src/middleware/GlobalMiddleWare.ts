@@ -52,13 +52,4 @@ export class GlobalMiddleWare {
       res.status(500).json({ message: "Internal Server Error" });
     }
   }
-
-  //   private setRoutes(): void {
-  //     const router = express.Router();
-
-  //     router.use((req, res, next) => GlobalMiddleWare.checkTokenBlacklist(req, res, next));
-
-  //     router.use("/users", userRouter); // No "/api" here, since it's handled by `app.use()`
-
-  // }
 }

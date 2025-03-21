@@ -24,46 +24,34 @@ export class UserController {
     req: Request,
     res: Response,
     next: NextFunction
-  ): Promise<void> {
+  ): Promise<any> {
     try {
-      const { name, email, password, phone } = req.body;
+      const { email, password } = req.body;
 
-      if (!name || !email || !password || !phone) {
-        res.status(400).json({
-          message: "All fields (name, email, password, phone) are required",
-        });
-        return;
+      const user = await User.findOne({email});
+      if(!user) {
+        return res.status(404).json({ message: "User not found" });
       }
-
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        res.status(409).json({ message: "Email already exists" });
-        return;
-      }
-
-      const verificationToken = Utils.generateVerificationToken();
+   
       const hash = await Utils.encryptPassword(password);
-
-      const newUser = new User({ name, email, password: hash, phone });
-      await newUser.save();
-
-      const payload = { email: newUser.email };
-      const token = Jwt.jwtSign(payload, newUser._id);
-
-      res
-        .status(201)
-        .json({ message: "Signup successful", token, user: newUser });
-
-      await NodeMailer.sendMail({
-        to: [newUser.email],
-        subject: "Email Verification",
-        html: `<h1>Your OTP is ${verificationToken}</h1>`,
+      user.password = hash;
+      await user.save();
+  
+      const payload = { email: user.email };
+      const token = Jwt.jwtSign(payload, user._id);
+  
+      return res.status(201).json({
+        message: "Signup successful",
+        token,
+        user: user,
       });
+  
     } catch (error) {
       console.error("Signup Error:", error);
-      next(error);
+      next(error);  // ✅ Pass error to Express error handler
     }
   }
+
   static async login(
     req: Request,
     res: Response,
@@ -179,6 +167,8 @@ export class UserController {
         { new: true, upsert: true }
       );
 
+      console.log("User : ", user)
+
       if (!user) {
         res.status(404).json({ message: "User not found" });
         return;
@@ -207,7 +197,7 @@ export class UserController {
         return;
       }
 
-      // Find user by emailF
+      // Find user by email
       const user = await User.findOne({ email });
 
       if (!user) {
@@ -237,4 +227,104 @@ export class UserController {
       next(error); // Pass error to global error handler
     }
   }
+
+
+
+  static async sendOtpLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = req.body;
+  
+      if (!email) {
+        res.status(400).json({ message: "Email is required" });
+        return;
+      }
+  
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); 
+  
+      const user = await User.findOneAndUpdate(
+        { email },
+        { otp, otpExpiresAt: otpExpiry },
+        { new: true }
+      );
+  
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+  
+      await NodeMailer.sendMail({
+        to: [email],
+        subject: "Your OTP Code",
+        html: `<p>Your OTP is <strong>${otp}</strong>. It is valid for 10 minutes.</p>`,
+      });
+  
+      res.status(200).json({ message: "OTP sent successfully" });
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      next(error);
+    }
+  }
+  
+  
+  
+  static async verifyOtpLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      res.status(400).json({ message: "Email and OTP are required" });
+      return;
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    if (!user.otp || user.otp !== otp || !user.otpExpiresAt || user.otpExpiresAt < new Date()) {
+      res.status(400).json({ message: "Invalid or expired OTP" });
+      return;
+    }
+
+    // Clear OTP after successful verification
+    await User.updateOne({ email }, { $unset: { otp: 1, otpExpiresAt: 1 } });
+
+    // Generate JWT token
+    const token = Jwt.sign({ id: user._id }, process.env.JWT_SECRET || "secret", { expiresIn: "1h" });
+
+    res.status(200).json({ message: "OTP verified successfully", token });
+  } catch (error) {
+    console.error("Error verifying OTP:", error);
+    next(error);
+  }
+}
+
+static async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      res.status(400).json({ message: "Email and new password are required" });
+      return;
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    // Hash new password and update
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successful" });
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    next(error);
+  }
+}
 }

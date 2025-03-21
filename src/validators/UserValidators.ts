@@ -1,23 +1,36 @@
 import { body } from "express-validator";
-import User from "../models/User"; 
+import User from "../models/User";
 
 export class UserValidators {
   static signup() {
     return [
-      
-      body("email", "Valid Email is required")
+      body("email")
         .isEmail()
+        .withMessage("Valid Email is required")
         .custom(async (email) => {
+          console.log("Checking user existence for email:", email);
           const user = await User.findOne({ email });
-          if (user) {
-            return Promise.reject("User already exists");
+          console.log("Database result:", user);
+
+          if (!user) {
+            console.log("User not found", email);
+            throw new Error("User not found with such email");
           }
           return true;
         }),
-      body("password", "Password must be 8-25 characters long")
+
+      body("password", "Password must be 6-25 characters long and alphanumeric")
         .isAlphanumeric()
-        .isLength({ min: 8, max: 25 }),
-     
+        .isLength({ min: 6, max: 25 }),
+
+      body("confirmPassword", "Passwords do not match").custom(
+        (confirmPassword, { req }) => {
+          if (confirmPassword !== req.body.password) {
+            throw new Error("Passwords do not match");
+          }
+          return true;
+        }
+      ),
     ];
   }
 
@@ -53,9 +66,7 @@ export class UserValidators {
   }
 
   static deleteNote() {
-    return [
-      body("noteId", "Note ID is required").isMongoId(),
-    ];
+    return [body("noteId", "Note ID is required").isMongoId()];
   }
 
   static checkResetPasswordEmail() {
@@ -94,6 +105,21 @@ export class UserValidators {
     ];
   }
 
+  static sendOtpLogin() {
+    return [body("email").isEmail().withMessage("Invalid email format")];
+  }
+
+  static verifyOtpLogin() {
+    return [
+      body("email").isEmail().withMessage("Invalid email format"),
+      body("otp")
+        .isNumeric()
+        .withMessage("OTP must be numeric")
+        .isLength({ min: 6, max: 6 })
+        .withMessage("OTP must be 6 digits"),
+    ];
+  }
+
   static resetPassword() {
     return [
       body("email", "Valid email is required")
@@ -112,14 +138,14 @@ export class UserValidators {
         .custom((otp, { req }) => {
           if (req.user.reset_password_token !== otp) {
             req.errorStatus = 422;
-            return Promise.reject("Reset password token is invalid. Try again.");
+            return Promise.reject(
+              "Reset password token is invalid. Try again."
+            );
           }
           return true;
         }),
     ];
   }
-
- 
 
   static verifyUserProfile() {
     return [
@@ -145,11 +171,8 @@ export class UserValidators {
   }
 
   static sendOtp() {
-    return [
-      body("email", "Valid email is required").isEmail(),
-    ];
+    return [body("email", "Valid email is required").isEmail()];
   }
-
 
   static verifyOtp() {
     return [
@@ -177,5 +200,3 @@ export class UserValidators {
     ];
   }
 }
-
-

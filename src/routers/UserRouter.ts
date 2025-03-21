@@ -20,6 +20,7 @@ class UserRouter {
   }
 
   private postRoutes() {
+    
     this.router.post(
       "/signup",
       UserValidators.signup(),
@@ -45,6 +46,29 @@ class UserRouter {
       UserValidators.verifyOtp(),
       UserController.verifyOtp
     );
+
+    this.router.post(
+      "/send-otp-login",
+      UserValidators.sendOtpLogin(),
+      GlobalMiddleWare.checkError,
+      UserController.sendOtpLogin
+    );
+
+    this.router.post(
+      "/verify-otp-login",
+      UserValidators.verifyOtpLogin(),
+      GlobalMiddleWare.checkError,
+      UserController.verifyOtpLogin
+    );
+
+    this.router.post(
+      "/reset-password",
+      UserValidators.resetPassword(),
+      GlobalMiddleWare.checkError,
+      UserController.resetPassword
+    );
+
+
 
     // ✅ Fixed logout by using `UserController.logout`
     this.router.post("/logout", GlobalMiddleWare.auth, UserController.logout);
