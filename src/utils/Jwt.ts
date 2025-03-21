@@ -10,7 +10,7 @@ export class Jwt {
     }
     
     return jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: "1h",
+      expiresIn: "10h",
       audience: userId.toString(),
       issuer: "bhoomi.com"
     });
