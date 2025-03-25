@@ -23,8 +23,8 @@ export class NoteController {
   static async updateNote(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { title, content, date } = req.body;
-      const updatedNote = await Note.findByIdAndUpdate(id, { title, content, date }, { new: true });
+      const { title, content, category, date } = req.body;
+      const updatedNote = await Note.findByIdAndUpdate(id, { title, content, category, date}, { new: true });
       if (!updatedNote) return res.status(404).json({ error: 'Note not found' });
       return res.json({ message: 'Note updated successfully', note: updatedNote });
     } catch (error) {

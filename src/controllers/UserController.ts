@@ -155,6 +155,12 @@ export class UserController {
         res.status(400).json({ message: "Email is required" });
         return;
       }
+      const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      res.status(400).json({ message: "User already exists" });
+      return;
+    }
 
       // Generate a 6-digit OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
