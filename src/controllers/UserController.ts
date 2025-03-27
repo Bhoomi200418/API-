@@ -259,6 +259,8 @@ export class UserController {
         return;
       }
 
+      // console.log("OTP: ", otp)
+
       await NodeMailer.sendMail({
         to: [email],
         subject: "Your Password Reset OTP",
@@ -330,8 +332,11 @@ export class UserController {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
+
+      const hashPassword = await Utils.encryptPassword(new_password);
+
       // :x: Do NOT hash again, just assign newPassword
-      user.password = new_password; // Pre-save hook will hash it
+      user.password = hashPassword; // Pre-save hook will hash it
       await user.save();
       return res.status(200).json({ message: "Password reset successful" });
     } catch (error) {
