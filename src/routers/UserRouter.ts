@@ -44,7 +44,7 @@ class UserRouter {
     this.router.post(
       "/verify-otp",
       UserValidators.verifyOtp(),
-      UserController.verifyOtp
+      UserController.verifyOTP
     );
 
     this.router.post(

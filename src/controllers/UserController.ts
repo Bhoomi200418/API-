@@ -84,10 +84,10 @@ export class UserController {
           email: user.email,
           userId: user._id,
         });
-      return; // ✅ Ensures function returns void
+      return;
     } catch (error) {
       next(error);
-      return; // ✅ Ensures function returns void
+      return; 
     }
   }
 
@@ -193,46 +193,45 @@ export class UserController {
       next(error); // Pass error to global error handler
     }
   }
-  static async verifyOtp(req: Request, res: Response, next: NextFunction) {
+  static async verifyOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, otp } = req.body;
+        console.log("Received request body:", req.body); // Debugging Log
 
-      // Validate input
-      if (!email || !otp) {
-        res.status(400).json({ message: "Email and OTP are required" });
-        return;
-      }
+        const { otp } = req.body;
 
-      // Find user by email
-      const user = await User.findOne({ email });
+        if (!otp) {
+            console.log("OTP is missing!"); // Debugging Log
+            res.status(400).json({ message: "OTP is required." });
+            return;
+        }
 
-      if (!user) {
-        res.status(404).json({ message: "User not found" });
-        return;
-      }
+        // Find OTP in database
+        const storedOtp = await User.findOne({ otp });
 
-      // Check if OTP matches and is still valid
-      if (
-        !user.otp ||
-        user.otp !== otp ||
-        !user.otpExpiresAt ||
-        user.otpExpiresAt < new Date()
-      ) {
-        res.status(400).json({ message: "Invalid or expired OTP" });
-        return;
-      }
+        if (!storedOtp || !storedOtp.otpExpiresAt || new Date() > new Date(storedOtp.otpExpiresAt)) {
+            await User.deleteOne({ otp });
+            res.status(400).json({ message: "Invalid or expired OTP." });
+            return;
+        }
 
-      // Clear OTP after successful verification
-      await User.updateOne({ email }, { $unset: { otp: 1, otpExpiresAt: 1 } });
+        // Find user by email associated with this OTP
+        let user = await User.findOne({ email: storedOtp.email });
 
-      res
-        .status(200)
-        .json({ message: "OTP verified successfully", email: email });
+        if (!user) {
+            user = new User({ email: storedOtp.email, password: "" });
+            await user.save();
+        }
+
+        await User.deleteOne({ otp });
+
+        res.status(200).json({ message: "OTP verified successfully", email: storedOtp.email }); // ✅ Return email
     } catch (error) {
-      console.error("Error verifying OTP:", error);
-      next(error); // Pass error to global error handler
+        console.error("Error verifying OTP:", error);
+        next(error);
     }
-  }
+}
+
+
 
 
 

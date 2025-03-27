@@ -1,21 +1,21 @@
 import * as jwt from "jsonwebtoken";
 
 export class Jwt {
-  static sign(arg0: { id: unknown; }, arg1: string, arg2: { expiresIn: string; }) {
-    throw new Error("Method not implemented.");
+  static sign(payload: object, secret: string, options?: jwt.SignOptions): string {
+    return jwt.sign(payload, secret, { ...options, expiresIn: "10h" }); // Fix applied
   }
+
   static jwtSign(payload: object, userId: any): string {
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET is not defined in environment variables");
     }
     
     return jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: "10h",
+      expiresIn: "10h", // Fixed: No need for 'StringValue'
       audience: userId.toString(),
       issuer: "bhoomi.com"
     });
   }
-
   static jwtVerify(token: string): Promise<object | string> {
     return new Promise((resolve, reject) => {
       if (!process.env.JWT_SECRET) {

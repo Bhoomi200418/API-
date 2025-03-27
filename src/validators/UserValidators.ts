@@ -176,7 +176,6 @@ export class UserValidators {
 
   static verifyOtp() {
     return [
-      body("email", "Valid email is required").isEmail(),
       body("otp", "OTP must be a 6-digit number")
         .isLength({ min: 6, max: 6 })
         .isNumeric()
