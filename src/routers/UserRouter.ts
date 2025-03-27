@@ -56,7 +56,7 @@ class UserRouter {
 
     this.router.post(
       "/verify-otp-login",
-      UserValidators.verifyOtpLogin(),
+      UserValidators.verifyResetPasswordToken(),
       GlobalMiddleWare.checkError,
       UserController.verifyOtpLogin
     );

@@ -11,12 +11,6 @@ export class UserValidators {
           console.log("Checking user existence for email:", email);
           const user = await User.findOne({ email });
           console.log("Database result:", user);
-
-          if (!user) {
-            console.log("User not found", email);
-            throw new Error("User not found with such email");
-          }
-          return true;
         }),
 
       body("password", "Password must be 6-25 characters long and alphanumeric")
@@ -86,22 +80,7 @@ export class UserValidators {
   static verifyResetPasswordToken() {
     return [
       body("email", "Valid email is required").isEmail(),
-      body("reset_password_token", "Reset password token is required")
-        .isNumeric()
-        .custom(async (token, { req }) => {
-          const user = await User.findOne({
-            email: req.body.email,
-            reset_password_token: token,
-            reset_password_token_time: { $gt: Date.now() },
-          });
-
-          if (!user) {
-            return Promise.reject(
-              "Reset password token is invalid or expired. Please regenerate."
-            );
-          }
-          return true;
-        }),
+      body("otp", "Reset password token is required").isString(),
     ];
   }
 
@@ -122,24 +101,23 @@ export class UserValidators {
 
   static resetPassword() {
     return [
-      body("email", "Valid email is required")
+      body("email", "Email is required")
         .isEmail()
         .custom(async (email, { req }) => {
           const user = await User.findOne({ email });
           if (!user) {
-            return Promise.reject("No user registered with this email");
+            throw new Error("No User Registered with such Email");
           }
           req.user = user;
           return true;
         }),
       body("new_password", "New password is required").isAlphanumeric(),
       body("otp", "Reset password token is required")
-        .isNumeric()
+        .isString()
         .custom((otp, { req }) => {
-          if (req.user.reset_password_token !== otp) {
-            req.errorStatus = 422;
-            return Promise.reject(
-              "Reset password token is invalid. Try again."
+          if (req.user.reset_password_otp !== otp) {
+            throw new Error(
+              "Reset password token is invalid, please try again"
             );
           }
           return true;

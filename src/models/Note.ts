@@ -15,7 +15,7 @@ const NoteSchema = new Schema<INote>(
     title: { type: String, required: false },
     content: { type: String, required: false },
     category: { type: String, required: false },
-    userId: { type: Schema.Types.ObjectId, required: true },
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     date: { type: Date, required: true, default: new Date() },
   },
   { timestamps: true }

@@ -1,8 +1,11 @@
 import { Router, Request, Response, NextFunction } from "express";
-// import { NotesController } from "../controllers/notescontroller";
-import { NoteController } from "../controllers/notescontroller";
+import { NoteController } from "../controllers/NotesController";
 import { GlobalMiddleWare } from "../middleware/GlobalMiddleWare";
 import { NotesValidators } from "../validators/NotesValidators";
+
+const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
 
 class NoteRouter {
   public router: Router;
@@ -18,7 +21,7 @@ class NoteRouter {
       GlobalMiddleWare.auth,
       NotesValidators.createNote(),
       GlobalMiddleWare.checkError,
-      NoteController.createNote
+      asyncHandler(NoteController.createNote)
     );
     this.router.put(
       "/update/:id",

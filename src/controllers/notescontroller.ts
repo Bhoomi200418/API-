@@ -3,23 +3,27 @@ import { Note } from "../models/Note";
 
 
 export class NoteController {
-  static async createNote(req: Request, res: Response, next: NextFunction) {
-    const user = (req as any).user;
+  static async createNote(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
     try {
-        console.log("Received Request from Device:", req.body); // ✅ Log request from Flutter
+      if (!(req as any).user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
 
-        const { title, content, category } = req.body;
-        const userId = user.aud
+      const { title, content } = req.body;
+      const note = new Note({
+        title,
+        content,
+        userId: (req as any).user.id, // ✅ Now TypeScript recognizes req.user
+      });
 
-        const newNote = new Note({ title, content, userId, category });
-        const savedNote = await newNote.save();
-
-        console.log("Saved Note in MongoDB:", savedNote); // ✅ Log stored note
-        res.status(200).json({ message: "Note created successfully", note: savedNote });
-    } catch (e) {
-       next(e)
+      await note.save();
+      return res.status(201).json({ message: "Note created successfully", note });
+    } catch (error) {
+      next(error);
     }
-}
+  }
+
+
   static async updateNote(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -33,16 +37,29 @@ export class NoteController {
     }
   }
   static async getNote(req: Request, res: Response) {
+    const user = (req as any).user; // Extract user from request
     try {
-      const { id } = req.params;
-      const note = await Note.findById(id);
-      if (!note) return res.status(404).json({ error: 'Note not found' });
-      return res.json(note);
+        const { id } = req.params;
+        console.log("Fetching Note ID:", id); // Debugging log
+
+        // Fetch note by ID
+        const note = await Note.findById(id);
+        if (!note) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        // Ensure the note belongs to the logged-in user
+        if (note.userId.toString() !== user.id) {
+            return res.status(403).json({ error: 'Access denied: Unauthorized user' });
+        }
+
+        return res.json(note);
     } catch (error) {
-      console.error('Error fetching note:', error);
-      return res.status(500).json({ error: 'Internal server error' });
+        console.error('Error fetching note:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
-  }
+}
+
   static async getAllNotes(req: Request, res: Response) {
     try {
       const notes = await Note.find();
