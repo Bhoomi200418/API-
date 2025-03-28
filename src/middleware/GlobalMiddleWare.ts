@@ -1,32 +1,49 @@
 import { validationResult } from "express-validator";
 import { Request, Response, NextFunction } from "express";
-
+import jwt, { JwtPayload } from "jsonwebtoken";
 import BlacklistedToken from "../models/BlacklistedToken";
-import jwt from "jsonwebtoken";
-import { Jwt } from "../utils/Jwt";
+
+export interface AuthRequest extends Request {
+  user?: JwtPayload & { sub?: string }; // Ensure `sub` (user ID) exists
+}
 
 export class GlobalMiddleWare {
-  static checkError(req: Request, res: Response, next: NextFunction) {
+  static checkError(req: Request, res: Response, next: NextFunction): void {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new Error(errors.array()[0].msg));
+      res.status(400).json({ error: errors.array()[0].msg });
+      return; // Stop execution after sending response
     }
     next();
   }
-  static async auth(req: Request, res: Response, next: NextFunction) {
-    const header_auth = req.headers.authorization;
-    const token = header_auth ? header_auth.slice(7, header_auth.length) : null;
+
+  static async auth(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      if (!token) {
-        (req as any).errorStatus = 401;
-        next(new Error("User doesn't exist1"));
+      console.log("Authorization Header:", req.headers.authorization); // 🔍 Log header
+
+      const header_auth = req.headers.authorization;
+      if (!header_auth || !header_auth.startsWith("Bearer ")) {
+        res.status(401).json({ error: "Unauthorized: No token provided" });
+        return;
       }
-      const decoded = await Jwt.jwtVerify(token as string);
-      (req as any).user = decoded;
+
+      const token = header_auth.slice(7);
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET as string
+      ) as JwtPayload & { sub?: string };
+
+      console.log("Decoded Token:", decoded); // 🔍 Debugging log
+      req.user = decoded; // Attach user to request
+
       next();
-    } catch (e) {
-      (req as any).errorStatus = 401;
-      next(new Error("User doesn't exist2"));
+    } catch (error) {
+      console.error("Authentication error:", error);
+      res.status(401).json({ error: "Unauthorized: Invalid token" });
     }
   }
 
@@ -43,13 +60,12 @@ export class GlobalMiddleWare {
           res.status(401).json({
             message: "Token has been blacklisted. Please log in again.",
           });
-          return;
+          return; // Ensure function exits after sending response
         }
       }
-      next(); // ✅ Call next() properly
+      next(); // Call next middleware
     } catch (error) {
-      console.error("Error checking token blacklist:", error);
-      res.status(500).json({ message: "Internal Server Error" });
+      next(error); // Pass error to Express error handler
     }
   }
 }

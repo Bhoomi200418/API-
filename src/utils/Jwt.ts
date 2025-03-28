@@ -1,6 +1,9 @@
 import * as jwt from "jsonwebtoken";
 
 export class Jwt {
+  static verify(token: any, arg1: string) {
+    throw new Error("Method not implemented.");
+  }
   // Generic JWT signing method
   static sign(payload: object, p0: string, p1: { expiresIn: string; }, options?: jwt.SignOptions): string {
     if (!process.env.JWT_SECRET) {
@@ -10,21 +13,15 @@ export class Jwt {
     return jwt.sign(payload, process.env.JWT_SECRET, { ...options, expiresIn: "10h" });
   }
 
-  // JWT Sign with userId
   static jwtSign(payload: object, userId: string): string {
-    if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET is not defined in environment variables");
-    }
-
     return jwt.sign(
-      { ...payload, sub: userId }, // Changed `aud` to `sub` for consistency
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "10h",
-        issuer: "bhoomi.com"
-      }
+      { ...payload, sub: userId }, // ✅ Ensure `sub` is set
+      process.env.JWT_SECRET as string,
+      { expiresIn: "10h", issuer: "bhoomi.com" }
     );
   }
+  
+  
 
   // JWT Verify Method
   static jwtVerify(token: string): Promise<object | string> {

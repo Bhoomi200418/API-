@@ -50,40 +50,38 @@ export class UserController {
       next(error); // ✅ Pass error to Express error handler
     }
   }
-
-  static async login(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  
+  static async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, password } = req.body;
       const user = await User.findOne({ email });
-
+  
       if (!user) {
         res.status(404).json({ message: "User not found" });
         return;
       }
-
+  
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
         res.status(401).json({ message: "Invalid credentials" });
         return;
       }
-
-      const payload = { email: user.email };
-      const token = Jwt.jwtSign(payload, user._id.toString()); // ✅ Fixed here
-
+  
+      // ✅ FIXED: Include `id` in the token payload
+      const payload = { id: user._id.toString(), email: user.email };
+      const token = Jwt.jwtSign(payload, user._id.toString());
+  
       res.status(200).json({
         message: "Login successful",
         token,
-        email: user.email,
         userId: user._id.toString(), // ✅ Ensure it's a string
+        email: user.email,
       });
     } catch (error) {
       next(error);
     }
   }
+  
 
   // Get user profile
   static async userProfile(
@@ -174,12 +172,14 @@ export class UserController {
         return;
       }
 
+      console.log("OTP: ", otp)
+
       // Send OTP via email using the NodeMailer class
-      await NodeMailer.sendMail({
-        to: [email],
-        subject: "Your OTP Code",
-        html: `<p>Your OTP is <strong>${otp}</strong>. It is valid for 10 minutes.</p>`,
-      });
+      // await NodeMailer.sendMail({
+      //   to: [email],
+      //   subject: "Your OTP Code",
+      //   html: `<p>Your OTP is <strong>${otp}</strong>. It is valid for 10 minutes.</p>`,
+      // });
 
       res.status(200).json({ message: "OTP sent successfully" });
     } catch (error) {
@@ -259,13 +259,13 @@ export class UserController {
         return;
       }
 
-      // console.log("OTP: ", otp)
+      console.log("OTP: ", otp)
 
-      await NodeMailer.sendMail({
-        to: [email],
-        subject: "Your Password Reset OTP",
-        html: `<p>Your OTP is <strong>${otp}</strong>. It is valid for 10 minutes.</p>`,
-      });
+      // await NodeMailer.sendMail({
+      //   to: [email],
+      //   subject: "Your Password Reset OTP",
+      //   html: `<p>Your OTP is <strong>${otp}</strong>. It is valid for 10 minutes.</p>`,
+      // });
 
       res.status(200).json({ message: "OTP sent successfully" });
     } catch (error) {

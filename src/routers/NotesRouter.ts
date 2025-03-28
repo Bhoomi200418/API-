@@ -23,8 +23,10 @@ class NoteRouter {
       GlobalMiddleWare.checkError,
       asyncHandler(NoteController.createNote)
     );
+    
     this.router.put(
       "/update/:id",
+      GlobalMiddleWare.auth,
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           await NoteController.updateNote(req, res);
@@ -45,19 +47,22 @@ class NoteRouter {
     );
     this.router.get(
       "/all",
+      GlobalMiddleWare.auth, // ✅ Ensure authentication is applied
       async (req: Request, res: Response, next: NextFunction) => {
         try {
-          await NoteController.getAllNotes(req, res);
+          await NoteController.getAllNotes(req, res, next); // Pass `next`
         } catch (error) {
           next(error);
         }
       }
     );
+    
     this.router.delete(
       "/delete/:id",
+      GlobalMiddleWare.auth, 
       async (req: Request, res: Response, next: NextFunction) => {
         try {
-          await NoteController.deleteNote(req, res);
+          await NoteController.deleteNote(req, res, next);
         } catch (error) {
           next(error);
         }
